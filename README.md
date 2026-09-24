@@ -35,6 +35,8 @@ npm run dev
 
 `predev` migrates and seeds the local database first. Then navigate to the [website](http://localhost:4321) to see the site!
 
+The home page includes category and publisher filters for the game catalog. Select one or more categories, optionally choose a publisher, and the prerendered game cards update immediately in the browser. Selecting both filter types shows games matching both selections; use **Clear filters** to restore the full catalog.
+
 To preview a production build instead:
 
 ```bash

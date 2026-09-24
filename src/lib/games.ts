@@ -1,7 +1,17 @@
-import { eq, asc } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
 import type { Game } from '../types/game';
+
+export interface GameFilterOptions {
+    categoryIds?: number[];
+    publisherId?: number;
+}
+
+export interface GameFilterOption {
+    id: number;
+    name: string;
+}
 
 const gameSelection = {
     id: games.id,
@@ -50,9 +60,49 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
+/** Categories available for game filtering, ordered alphabetically. */
+export async function getGameCategories(db: Database): Promise<GameFilterOption[]> {
+    return db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .orderBy(asc(categories.name));
+}
+
+/** Publishers available for game filtering, ordered alphabetically. */
+export async function getGamePublishers(db: Database): Promise<GameFilterOption[]> {
+    return db
+        .select({ id: publishers.id, name: publishers.name })
+        .from(publishers)
+        .orderBy(asc(publishers.name));
+}
+
 /** All games ordered by title. */
 export async function getAllGames(db: Database): Promise<Game[]> {
     const rows = await baseGamesQuery(db).orderBy(asc(games.title));
+    return rows.map(mapGame);
+}
+
+/** Games matching the selected categories and publisher, ordered by title. */
+export async function getFilteredGames(
+    db: Database,
+    { categoryIds, publisherId }: GameFilterOptions,
+): Promise<Game[]> {
+    const conditions = [];
+
+    if (categoryIds && categoryIds.length > 0) {
+        conditions.push(inArray(games.categoryId, categoryIds));
+    }
+
+    if (publisherId !== undefined) {
+        conditions.push(eq(games.publisherId, publisherId));
+    }
+
+    const query = baseGamesQuery(db);
+    const rows =
+        conditions.length > 0
+            ? await query.where(and(...conditions)).orderBy(asc(games.title))
+            : await query.orderBy(asc(games.title));
+
     return rows.map(mapGame);
 }
 
